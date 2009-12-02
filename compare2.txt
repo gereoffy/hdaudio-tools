@@ -1,0 +1,74 @@
+A 'compare2' programmal gyorsan megnezhetjuk meg a nyers ac3/dts fileokat,
+hogy azokat hogyan kell majd "feldolgozni", de vagni is lehet mar vele.
+
+A compare2 egy tovabbfejlesztett verzioja a search-aud/search-vid progiknak.
+Ez egybol az ac3/dts (vagy sztereo int16 wav) fileokbol dolgozik, es valos
+idoben szamolja az FFT-t es a nyujtast. Igy hamar kiderul, hogy:
+- mennyi az initial delay
+- kell-e egyaltalan vagni    (cutlist.txt is keszitheto vele!)
+- kell-e egyaltalan nyujtani
+- a hang nyujtast resample vagy a time-stretch modszerrel kell csinalni
+
+Pl.:  compare2 hd.dts hun.ac3
+
+Inditaskor megjelenik egy 1024x512 pixeles FFT, rajta piros szinnel az elso,
+zolddel a masodik file FFT-je. A search-hoz hasonloan lehet a nyilakkal,
+pgup/pgdwn, [ ] gombokkal kulonbozo leptekkel scrollozni.
+(viszont joval lassabb, foleg DTS eseten, mivel ilyenkor szamolja az FFT-t)
+SHIFT-el egyutt nyomva csak a 2. hangsav mozdul el, anelkul mind a 2 egyutt.
+Tovabba az 1..9 gombokkal 10%..90% poziciora lehet ugrani (home/end meg 0/100%)
+A +/- gombokkal lehet ki-be zoomolni az ido-tengelyt, bar sok ertelme nincs.
+
+Ha az elejen nagyjabol beallitottuk kezzel a delay-t, akkor az 's' lenyomasara
+a progi megprobalja 10ms pontosan beallitani. Altalaban sikerul is neki :)
+(shift+s hatasara tovabb finomitja a delayt 1ms pontossagura, ctrl+s pedig
+1 sample pontossagu delayt szamol!)
+Az 'e' gombbal valtoztathato az alul lathato ENVELOPE (hangero) gorbe tipusa:
+  off / s_max / fft_avg / fft_max(default)
+
+Ezutan az 'r' gombbal lehet valtogatani a 2 fele nyujtas (TS/resample) kozott.
+(A shift+r pedig ki/bekapcsolja a nyujtast, ctrl+r a TS savok szamat allitja)
+El kell donteni, melyiknel a legjobb az atfedes (minel sargabb legyen!)
+a 2 hangminta kozott, es azt a modszert kell majd alkalmazni a kesobbiekben.
+
+Ha az elejen belottuk a delayt, es nagyjabol vegig leptetve (1..9, end)
+mindenhol jonak tunik, akkor megallapithatjuk: ezt nem is kell vagni! :)))
+
+Masik lehetoseg a matching funkcio: 'm' lenyomasara folyamatosan teker
+elore (shift+'m' hatra), amig elcsuszast nem talal a 2 stream kozott.
+Igy ugyan lassan, de nagyon alaposan ossze lehet hasonlitani a 2 filet.
+
+Ha menteni akarjuk a vagasi poziciot es delayt, akkor a 'c' gombbal teheto meg.
+(cutlist.txt-hez fuzi hozza, millisec-ben megadva a HD-s poziciot es a delayt)
+Vagasnal mindig a kozepso fuggoleges pozicio-vonaltol _jobbra_ levo resz
+kell szinkronban legyen, tehat a delay erteket ugy allitsuk be!
+(shift+c visszaallitja az utolso mentett delay erteket, backspace visszaugrik
+az utolso vagasi poziciora, shift+'0' pedig abszolut 0-ra allitja a delayt)
+
+Egyeb gombok:
+'h' - ugyanaz mint az 's', de a 2. es 3. hangsavot hasonlitja ossze
+'d' - differential mode on/off: egymason mutassa-e a savokat vagy egymas alatt
+      shift+d: diff. megjelenitesi mod valtoztatasa (csak advanced usreeknek!:))
+'f' - frekvencia-kompenzacio ki/be (rossz minosegu hang eseten segithet kicsit)
+'v' - video mode on/off: hang vagy kep alapjan vagas (search-aud vagy -vid)
+'p' - playback, lejatssza a vagovonaltol jobbra levo hangot, egyutt a 2 savot
+      (shift+p csak az elso, ctrl+p csak a 2. savot jatssza le, alt+p a 3.-at)
+      (ctrl+r valtoztatja a time stretching-re hasznalt algoritmust/minoseget)
+'o' es 'l': mint a 'p', de o-nal csak az elterest, l-nel az egyezo reszt jatssza le
+      (shift+d-vel kulonbozo fft szuresi modok valaszthatok ki, igy egesz jol
+       el lehet kuloniteni a zenet a szovegtol)
+TAB - a vagasi terulet a vagovonaltol jobbra vagy balra legyen megjelenitve?
+      
+Ha az audio file-al azonos nevu .raw kiterjesztesu fileunk is van,
+akkor azt is megnyitja es kepkent kezeli a program. Ilyenkor felul
+megjelenik 2 kepkocka, a vagovonalon levo es az elotte levo.
+Lejatszaskor ('p' gomb) a jobb oldali kep megy a hanggal egyutt, igy
+ellenorizheto a szaj-szinkron is.
+Ha mindket savhoz van .raw akkor egymason mutatja a kepeket, ugy, mint
+a hangot. 'd'-vel valtva savonkenti nezetre a kepeket is kulon mutatja!
+A kep fps-et (amihez a hang keszul!) az -fps opcioval lehet megadni (23.976)
+
+Megadhatunk egy 3. hangsavot is, ilyenkor ezt az egesz alatt, a kepernyo
+aljan kulon megjeleniti, igy a vagasnal figyelembe veheto az ottani jel is.
+(ez akkor jo, ha az angol hang alapjan vagunk: compare2 hd.dts eng.ac3 hun.ac3)
+

@@ -1,0 +1,35 @@
+AC3/DTS -> WAV/WAVs/AGM/AC3/DTS konvertalo es nyujto program v2.2
+=================================================================
+
+resample [opciok] forras.[ac3|dts] cel.[wav|agm|ac3|dts]
+  -pal          : nyujtas, pontosan 25/(24000/1001) aranyban (pal->ntsc) DEFAULT!
+  -ntsc         : osszenyomas, pontosan (24000/1001)/25 aranyban (ntsc->pal)
+  -resample XXX : nyujts merteke (pl 1.042708333, de Hz-ben is meg lehet adni!)
+  -ch X         : csatornak szama (default: ugyanannyi amennyi az eredeti fileban)
+  -ch 2         : sztereo downsample (osszekeveri a csatornakat sima 2.0-ra)
+  -split        : minden csatornat kulon .wav-ba rak (default: 1db sokcsatis wav)
+  -int          : int16 formatumu WAV kimenet (default: 32-bit float)
+  -b XXX        : AC3/DTS kimenet eseten a bitrata (default: ugyananyi mint a forras)
+
+tstretch [opciok] forras.[ac3|dts] cel.[wav|agm|ac3|dts]
+ugyanazok az opciok, mint resample-nel, plusz:
+  -pitch XXX    : (csak a) hangmagassag valtoztatasa (pl. 1.042708333)
+  -hq           : high quality (nem igazan jobb, de 3x lassabb)
+  -slow         : az eredeti (EXE-ben levo) FFT hasznalata a gyors FFTw helyett
+  -debug        : loader & wrapperek debug uzenetei (csak hibakereseshez)
+
+Megjegyzes: AC3 kimenet eseten szukseg lesz az AFTEN nevu programra is:
+http://sourceforge.net/project/showfiles.php?group_id=183195&package_id=212610
+
+DTS kimenet eseten szukseg lesz az agm2dts programra. Ehhez kell a
+DTS Pro Encoder programbol a DTS.dll, es linux alatt egy windozbol
+kimasolva (win2k-ssal tesztelve) az MSVCIRT.dll is!
+
+pl:
+resample -pal hun.ac3 hun-nyujtott.ac3  (letrehozza a nyujtott ac3-at)
+resample -split -int hun.dts dts        (letrehoz 6db int16 wav-ot, dts* neven)
+resample -ch 2 -b 192 hd.dts hd.ac3     (sztereo ac3 letrehozas dts hangbol)
+resample -b 768 eng1500.dts eng768dts.cpl  (utana atnevezni .dts-re!)
+tstretch -hq -slow -pal hun.dts hun-ny.dts (dts nyujtas max minosegben)
+tstretch -pitch 1.5 hun.ac3 hun-mokus-edition.ac3 :)  (probald ki, megeri!)
+
