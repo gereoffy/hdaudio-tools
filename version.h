@@ -1,2 +1,2 @@
 
-#define VERSION "hdaudio-tools v2.5beta by arpi"
+#define VERSION "hdaudio-tools v2.7beta by arpi"

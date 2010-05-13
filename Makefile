@@ -4,15 +4,18 @@
 #SDL = -lSDLmain -lSDL -Wl,-framework,Cocoa
 
 # x86 MacOSX:
-#CFLAGS = -g -O3 -march=core2 -malign-double -ffast-math -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -I/sw/include/ -L/sw/lib -lm
-CFLAGS = -g -O3 -march=core2 -ffast-math -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -I/sw/include/ -L/sw/lib -lm
-SDL = -lSDLmain -lSDL -Wl,-framework,Cocoa
+#CFLAGS = -g -O3 -m32 -march=core2 -malign-double -ffast-math -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -I/sw/include/ -L/sw/lib -lm
+#SDL = -lSDLmain -lSDL -Wl,-framework,Cocoa
+
+# 64bit MacOSX:
+#CFLAGS = -g -O3 -m64 -march=core2 -fnested-functions -ffast-math -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -I/sw/include/ -L/sw/lib -lm
+#SDL = -I/Library/Frameworks/SDL.framework/Headers SDLMain.m -framework SDL -framework Cocoa
 
 ## x86 Linux / cygwin:
 #-mfpmath=sse
 ##CFLAGS = -O3 -march=i686 -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -lm
-#CFLAGS = -O3 -march=i686 -malign-double -ffast-math -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -lm
-#SDL = -lSDL
+CFLAGS = -O3 -march=i686 -malign-double -ffast-math -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -lm
+SDL = -lSDL
 
 LOADERFLAGS=-Iloader -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Ddbg_printf=__vprintf -DTRACE=__vprintf
 
@@ -33,11 +36,11 @@ LOADER=  loader/elfdll.c \
 #FFTW = -lfftw3
 FFTWF = -lfftw3f
 
-AC3 = -la52 -ldca
+AC3 = -la52 -ldts
 MP3 = -lmad
 #SRC = -lsamplerate
 SRC = samplerate.c src_sinc.c
-APPS=resample tstretch tstretchsmp cut copypart dgindex dgfix dgparse dtspack dvddelay agm2dts mp3towav compare2
+APPS=resample tstretch tstretchsmp hdcut copypart dgindex dgfix dgparse dtspack dvddelay mp3towav compare2 compare2smp agm2dts
 
 all: $(APPS)
 
@@ -45,6 +48,9 @@ remake: clean all
 
 clean:
 	rm -f $(APPS) *.exe
+
+install: $(APPS)
+	cp -a $^ /usr/local/bin/
 
 tstretch: resample.c mpex2v3.c mpex2_bin.c mpex2_c.c mpex2_conv.c
 	$(CC) -DMPEX2 -DFFTW $(CFLAGS) -o $@ $^ $(AC3) $(FFTWF)
@@ -64,7 +70,10 @@ resample: resample.c $(SRC)
 compare2: compare2.c pitch.c filter.c
 	$(CC) $(CFLAGS) -o $@ $^ $(FFTWF) $(AC3) $(SDL)
 
-cut: cut.c
+compare2smp: compare2.c pitch.c filter.c
+	$(CC) $(CFLAGS) -DSMP -o $@ $^ $(FFTWF) $(AC3) $(SDL) -lpthread
+
+hdcut: hdcut.c
 	$(CC) $(CFLAGS) -o $@ $^ $(AC3)
 
 copypart: copypart.c

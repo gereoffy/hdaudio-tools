@@ -141,7 +141,7 @@ long callback_wav(void *cb_data, float **data){
     if(wav_format==WAV_ID_FLOAT){
 	// float
         for(j=0;j<frlen;j++){
-	    unsigned int* src=buffer+wav_blocksize*j;
+	    unsigned int* src=(unsigned int*)(buffer+wav_blocksize*j);
 	    for(i=0;i<channels;i++){
 		union {
 		    unsigned int i;
@@ -154,7 +154,7 @@ long callback_wav(void *cb_data, float **data){
     } else {
 	// int16
         for(j=0;j<frlen;j++){
-	    unsigned short* src=buffer+wav_blocksize*j;
+	    unsigned short* src=(unsigned short*)(buffer+wav_blocksize*j);
 	    for(i=0;i<channels;i++){
 		short x=bswap_16(src[i]);
 	        *ptr++=x*(volume/32768.0);
@@ -167,7 +167,7 @@ long callback_wav(void *cb_data, float **data){
 
 
 long callback_wavs(void *cb_data, float **data){
-  int c,frlen;
+  int c,frlen=0;
   for(c=0;c<channels;c++){
     unsigned char buffer[8192];
     frlen=fread(buffer,1,sizeof(buffer),f1s[c]);
@@ -176,11 +176,11 @@ long callback_wavs(void *cb_data, float **data){
     if(frlen<=0) return 0; // EOF
     //
     float* ptr=inbuf+c;
-    int i,j;
+    int j;
     if(wav_format==WAV_ID_FLOAT){
 	// float
         for(j=0;j<frlen;j++){
-	    unsigned int* src=buffer+wav_blocksize*j;
+	    unsigned int* src=(unsigned int*)(buffer+wav_blocksize*j);
 	    union {
 	        unsigned int i;
 	        float f;
@@ -192,7 +192,7 @@ long callback_wavs(void *cb_data, float **data){
     } else {
 	// int16
         for(j=0;j<frlen;j++){
-	    unsigned short* src=buffer+wav_blocksize*j;
+	    unsigned short* src=(unsigned short*)(buffer+wav_blocksize*j);
 	    short x=bswap_16(*src);
 	    *ptr=x*(volume/32768.0);
 	    ptr+=channels;

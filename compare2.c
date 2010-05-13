@@ -1,4 +1,14 @@
 
+#if 1
+#define COLOR_B 24
+#define COLOR_G 16
+#define COLOR_R 8
+#else
+#define COLOR_B 0
+#define COLOR_G 8
+#define COLOR_R 16
+#endif
+
 #define BLOCKS 512
 #define MAXBLOCKS (16*BLOCKS)
 
@@ -28,6 +38,16 @@
 #include <stdint.h>
 #include <math.h>
 
+
+#ifdef SMP
+#if !defined(__CYGWIN__) && !defined(__MINGW32__)
+#include <pthread.h>
+#else
+#include <windows.h>
+#endif
+#endif
+
+
 #include <fftw3.h>
 
 #include <a52dec/a52.h>
@@ -42,7 +62,7 @@
 #include "version.h"
 
 #include <SDL/SDL.h>
-//#include <SDL/SDL_main.h>
+#include <SDL/SDL_main.h>
 SDL_Surface *screen=NULL;
 
 int noiselimit=5;
@@ -94,6 +114,10 @@ typedef struct buffer_s {
     void* state;      // a52/dca state
     sample_t* samples;// a52/dca samples[]
     unsigned int id;  // cache ID
+    //
+    float* fft_in;
+    fftwf_complex* fft_out;
+    fftwf_plan plan;
 } buffer_t;
 
 
@@ -228,7 +252,9 @@ void draw_cft(buffer_t* buffer1,int y0){
 }
 #endif
 
+//#ifdef FILTER
 static unsigned char fft_filter[2*BLOCKS*BLOCKSIZE];
+//#endif
 
 static inline int gauss(unsigned char *p){
     return (p[-1]*0.3 + p[0] + p[1]*0.3)/1.6;
@@ -240,8 +266,10 @@ static inline int gauss(unsigned char *p){
 
 void draw_diff(buffer_t* buffer1,buffer_t* buffer2,int y0,int mode){
     int y;
+#ifdef FILTER
     unsigned long filtertemp[2*BLOCKS];
     memset(filtertemp,0,sizeof(unsigned long)*2*BLOCKS);
+#endif
     for(y=0;y<BLOCKSIZE;y++){
 	unsigned int* ptr= screen->pixels + (y0+y)*screen->pitch;
 	unsigned char* src1=&(buffer1->fft[(buffer1->b_pos-BLOCKS)*BLOCKSIZE+y]);
@@ -250,14 +278,16 @@ void draw_diff(buffer_t* buffer1,buffer_t* buffer2,int y0,int mode){
 	  // "yellow"
 	  int x;
 	  for(x=0;x<2*BLOCKS;x+=4){
-	    ptr[x+0]= (src1[0*BLOCKSIZE]<<16) | (src2[0*BLOCKSIZE]<<8);
-	    ptr[x+1]= (src1[1*BLOCKSIZE]<<16) | (src2[1*BLOCKSIZE]<<8);
-	    ptr[x+2]= (src1[2*BLOCKSIZE]<<16) | (src2[2*BLOCKSIZE]<<8);
-	    ptr[x+3]= (src1[3*BLOCKSIZE]<<16) | (src2[3*BLOCKSIZE]<<8);
+	    ptr[x+0]= (src1[0*BLOCKSIZE]<<COLOR_R) | (src2[0*BLOCKSIZE]<<COLOR_G);
+	    ptr[x+1]= (src1[1*BLOCKSIZE]<<COLOR_R) | (src2[1*BLOCKSIZE]<<COLOR_G);
+	    ptr[x+2]= (src1[2*BLOCKSIZE]<<COLOR_R) | (src2[2*BLOCKSIZE]<<COLOR_G);
+	    ptr[x+3]= (src1[3*BLOCKSIZE]<<COLOR_R) | (src2[3*BLOCKSIZE]<<COLOR_G);
+#ifdef FILTER
 	    filtertemp[x+0]+=SQR(src1[0*BLOCKSIZE]-src2[0*BLOCKSIZE]);
 	    filtertemp[x+1]+=SQR(src1[1*BLOCKSIZE]-src2[1*BLOCKSIZE]);
 	    filtertemp[x+2]+=SQR(src1[2*BLOCKSIZE]-src2[2*BLOCKSIZE]);
 	    filtertemp[x+3]+=SQR(src1[3*BLOCKSIZE]-src2[3*BLOCKSIZE]);
+#endif
 	    src1+=BLOCKSIZE*4; src2+=BLOCKSIZE*4;
 	  }
 	} else
@@ -274,7 +304,7 @@ void draw_diff(buffer_t* buffer1,buffer_t* buffer2,int y0,int mode){
 	    if(a*3<b && c*3<b) b=(a+c)/2;
 	    if(b>255) b=255;
 	    fft_filter[x*BLOCKSIZE+y]=b;
-	    ptr[x]= b*0x010101;
+	    ptr[x]= b*0x01010101;
 	    src1+=BLOCKSIZE; src2+=BLOCKSIZE;
 	  }
 	} else
@@ -286,7 +316,7 @@ void draw_diff(buffer_t* buffer1,buffer_t* buffer2,int y0,int mode){
 	    if(mode==3) b=(b*b)>>6; else if(b<0) b=-b;
 	    if(b>255) b=255;
 	    fft_filter[x*BLOCKSIZE+y]=b;
-	    ptr[x]= b*0x010101;
+	    ptr[x]= b*0x01010101;
 	    src1+=BLOCKSIZE; src2+=BLOCKSIZE;
 	  }
 	} else
@@ -303,11 +333,12 @@ void draw_diff(buffer_t* buffer1,buffer_t* buffer2,int y0,int mode){
 	    if(mode==5) b=(b*b)>>6; else if(b<0) b=-b;
 	    if(b>255) b=255;
 	    fft_filter[x*BLOCKSIZE+y]=b;
-	    ptr[x]= b*0x010101;
+	    ptr[x]= b*0x01010101;
 	    src1+=BLOCKSIZE; src2+=BLOCKSIZE;
 	  }
 	}
     }
+#ifdef FILTER
     if(mode==0){
 	int x;
 	for(x=0;x<2*BLOCKS;x++){
@@ -320,6 +351,7 @@ void draw_diff(buffer_t* buffer1,buffer_t* buffer2,int y0,int mode){
 	    memset(&fft_filter[x*BLOCKSIZE], b ,BLOCKSIZE);
 	}
     }
+#endif
 }
 
 
@@ -385,9 +417,9 @@ void draw_frame_diff(buffer_t* buffer1,buffer_t* buffer2,int x0,int y0,int frame
 	ptr+=x0;
 	int x;
 	for(x=0;x<VIDEO_W;x++){
-	    if(VIDEO_SCALE==2) ptr[2*x+0]= ptr[2*x+1]= (src1[x]<<16) | (src2[x]<<8);
-	    if(VIDEO_SCALE==4) ptr[4*x+0]= ptr[4*x+1]= ptr[4*x+2]= ptr[4*x+3]=  (src1[x]<<16) | (src2[x]<<8);
-	    if(VIDEO_SCALE==8) ptr[8*x+0]= ptr[8*x+1]= ptr[8*x+2]= ptr[8*x+3]= ptr[8*x+4]= ptr[8*x+5]= ptr[8*x+6]= ptr[8*x+7]=  (src1[x]<<16) | (src2[x]<<8);
+	    if(VIDEO_SCALE==2) ptr[2*x+0]= ptr[2*x+1]= (src1[x]<<COLOR_R) | (src2[x]<<COLOR_G);
+	    if(VIDEO_SCALE==4) ptr[4*x+0]= ptr[4*x+1]= ptr[4*x+2]= ptr[4*x+3]=  (src1[x]<<COLOR_R) | (src2[x]<<COLOR_G);
+	    if(VIDEO_SCALE==8) ptr[8*x+0]= ptr[8*x+1]= ptr[8*x+2]= ptr[8*x+3]= ptr[8*x+4]= ptr[8*x+5]= ptr[8*x+6]= ptr[8*x+7]=  (src1[x]<<COLOR_R) | (src2[x]<<COLOR_G);
 	}
     }
 
@@ -419,10 +451,10 @@ void draw_video_diff(buffer_t* buffer1,buffer_t* buffer2,int y0){
 	unsigned char* src2=&buffer2->video[(y&63)+((VIDEO_H/8)+(y/64)*(VIDEO_H/4))*VIDEO_W];
 	int x;
 	for(x=0;x<2*BLOCKS;x+=4){
-	    ptr[x+0]= (src1[0*VIDEO_W*VIDEO_H]<<16) | (src2[0*VIDEO_W*VIDEO_H]<<8);
-	    ptr[x+1]= (src1[1*VIDEO_W*VIDEO_H]<<16) | (src2[1*VIDEO_W*VIDEO_H]<<8);
-	    ptr[x+2]= (src1[2*VIDEO_W*VIDEO_H]<<16) | (src2[2*VIDEO_W*VIDEO_H]<<8);
-	    ptr[x+3]= (src1[3*VIDEO_W*VIDEO_H]<<16) | (src2[3*VIDEO_W*VIDEO_H]<<8);
+	    ptr[x+0]= (src1[0*VIDEO_W*VIDEO_H]<<COLOR_R) | (src2[0*VIDEO_W*VIDEO_H]<<COLOR_G);
+	    ptr[x+1]= (src1[1*VIDEO_W*VIDEO_H]<<COLOR_R) | (src2[1*VIDEO_W*VIDEO_H]<<COLOR_G);
+	    ptr[x+2]= (src1[2*VIDEO_W*VIDEO_H]<<COLOR_R) | (src2[2*VIDEO_W*VIDEO_H]<<COLOR_G);
+	    ptr[x+3]= (src1[3*VIDEO_W*VIDEO_H]<<COLOR_R) | (src2[3*VIDEO_W*VIDEO_H]<<COLOR_G);
 	    src1+=VIDEO_W*VIDEO_H*4; src2+=VIDEO_W*VIDEO_H*4;
 	}
     }
@@ -432,7 +464,7 @@ void draw_cut(int delay,int side,int y0){
     int min,max;
     min=max=screen->w/2;
     int adelay=(delay<0)?-delay:delay;
-    int color=(delay<0)?0x40ff40:0xff4040;
+    int color=(delay<0)?0x404040|(0xff<<COLOR_G):0x404040|(0xff<<COLOR_R);
     if(!side){
 	min-=adelay; if(min<0) min=0;
     } else {
@@ -535,17 +567,17 @@ buffer_t* dupe_buffer(buffer_t* orig,int maxblocks){
 
 #define CACHESIZE 16
 
-unsigned int cache_serial=0;
-unsigned int cache_last[CACHESIZE]={0,};
-int cache_block[CACHESIZE]={-1,};
+volatile unsigned int cache_serial=0;
+volatile unsigned int cache_last[CACHESIZE]={0,};
+volatile int cache_block[CACHESIZE]={-1,};
 sample_t cache_samples[CACHESIZE][6][256];
 
 // channel order is LFE, left, center, right, left surround, right surround.
 int ch=-1; // -1 = mix all channels  0..5 = use only this channel
 
-float s_max=0;
+//float s_max=0;
 
-int read_ac3_block(buffer_t* buf,unsigned int f_pos,float* fft_in,int maxlen){
+int read_ac3_block(buffer_t* buf,unsigned int f_pos,float* fft_in,int maxlen,float* s_max){
     unsigned char buffer[4096];
     unsigned int block=f_pos / buf->ac3_framelen;
     unsigned int skip=f_pos - block*buf->ac3_framelen; // samples to skip before read
@@ -564,7 +596,7 @@ int read_ac3_block(buffer_t* buf,unsigned int f_pos,float* fft_in,int maxlen){
 		if(i>=maxlen) break;
 		// process sample
 		fft_in[i]=cache_samples[cache][b][j];
-		if(fft_in[i]>s_max) s_max=fft_in[i];
+		if(fft_in[i]>*s_max) *s_max=fft_in[i];
 		++i;
 	    }
 	    skip=0;
@@ -631,7 +663,7 @@ retry:
 		if(skip) --skip; else
 		if(i<maxlen){
 		    fft_in[i]=x;
-		    if(x>s_max) s_max=x;
+		    if(x>*s_max) *s_max=x;
 		    ++i;
 		}
 	    }
@@ -642,7 +674,7 @@ retry:
     return 1;
 }
 
-int read_wav_block(buffer_t* buf,unsigned int f_pos,float* fft_in,int maxlen){
+int read_wav_block(buffer_t* buf,unsigned int f_pos,float* fft_in,int maxlen,float* s_max){
 	if(!buf->wavfile) return 0; // no audio
 	signed short buffer[maxlen][buf->ac3_channels];
 	fseeko(buf->wavfile,wavhdr_len+buf->ac3_framelen*(off_t)f_pos,SEEK_SET);
@@ -660,7 +692,7 @@ int read_wav_block(buffer_t* buf,unsigned int f_pos,float* fft_in,int maxlen){
 		x+=buffer[i][1];
 	    }
 	    fft_in[i]=x*(1.0/32768.0); // remap to -1.0 .. 1.0
-	    if(fft_in[i]>s_max) s_max=fft_in[i];
+	    if(fft_in[i]>*s_max) *s_max=fft_in[i];
 	}
 //	while(i<maxlen) fft_in[i]=0;
         return 1;
@@ -681,11 +713,12 @@ extern void FFTfilter(long numSampsToProcess, long fftFrameSize, long osamp, flo
 void mix_audio(buffer_t* buffer,unsigned int f_pos,int ch,double resample,int pitch,int filter){
     // load
     int len=BLOCKSIZE*BLOCKS*resample+4;
+    float s_max=0;
     printf("MIX ch%d: reading %d samples from %d  (scale %5.3f)\n",ch,len,f_pos,resample);
     if(!buffer->ac3_blocksize){
-	if(!read_wav_block(buffer,f_pos,audiotemp,len)) return; // EOF
+	if(!read_wav_block(buffer,f_pos,audiotemp,len,&s_max)) return; // EOF
     } else {
-	if(!read_ac3_block(buffer,f_pos,audiotemp,len)) return; // EOF
+	if(!read_ac3_block(buffer,f_pos,audiotemp,len,&s_max)) return; // EOF
     }
     // pitch correction?
     if(pitch && resample!=1.0){
@@ -764,18 +797,18 @@ void play_audio(buffer_t* buffer1,long pos1,double resample,int pitch,int filter
 
 
 // FFT data
-float* fft_in=NULL;
-fftwf_complex* fft_out=NULL;
-fftwf_plan plan;
+//float* fft_in=NULL;
+//fftwf_complex* fft_out=NULL;
+//fftwf_plan plan;
 
-void fft_init(){
-    fft_in=fftwf_malloc(sizeof(float) * FFTSIZE);
-    fft_out=fftwf_malloc(sizeof(fftwf_complex) * FFTSIZE);
-    plan = fftwf_plan_dft_r2c_1d(FFTSIZE, fft_in, fft_out, FFTW_ESTIMATE|FFTW_DESTROY_INPUT);
+void fft_init(buffer_t* b){
+    b->fft_in=fftwf_malloc(sizeof(float) * FFTSIZE);
+    b->fft_out=fftwf_malloc(sizeof(fftwf_complex) * FFTSIZE);
+    b->plan = fftwf_plan_dft_r2c_1d(FFTSIZE, b->fft_in, b->fft_out, FFTW_ESTIMATE|FFTW_DESTROY_INPUT);
 }
 
 void update_fft_line(buffer_t* b,int n,int f_pos,double resample,int rs_mode){
-	s_max=0;
+	float s_max=0;
 	if(f_pos<0){
 clear:	    memset(b->fft+BLOCKSIZE*n,0,BLOCKSIZE);
 	    memset(b->env+n,0,sizeof(envdata_t));
@@ -786,28 +819,28 @@ clear:	    memset(b->fft+BLOCKSIZE*n,0,BLOCKSIZE);
 	    int len=FFTSIZE*resample+4;
 	    float temp[len];
 	    if(!b->ac3_blocksize){
-		if(!read_wav_block(b,f_pos,temp,len)) goto clear; // EOF
+		if(!read_wav_block(b,f_pos,temp,len,&s_max)) goto clear; // EOF
 	    } else {
-		if(!read_ac3_block(b,f_pos,temp,len)) goto clear; // EOF
+		if(!read_ac3_block(b,f_pos,temp,len,&s_max)) goto clear; // EOF
 	    }
 	    // let's resample!  (linear interpolation...)
 	    int i;
 	    for(i=0;i<FFTSIZE;i++){
 		float a=i*resample;
 		int x=a; a-=x;
-		fft_in[i]=temp[x] + (temp[x+1]-temp[x])*a;
+		b->fft_in[i]=temp[x] + (temp[x+1]-temp[x])*a;
 	    }
 	} else {
 	    // time-stretch
 	    if(!b->ac3_blocksize){
-		if(!read_wav_block(b,f_pos,fft_in,FFTSIZE)) goto clear; // EOF
+		if(!read_wav_block(b,f_pos,b->fft_in,FFTSIZE,&s_max)) goto clear; // EOF
 	    } else {
-		if(!read_ac3_block(b,f_pos,fft_in,FFTSIZE)) goto clear; // EOF
+		if(!read_ac3_block(b,f_pos,b->fft_in,FFTSIZE,&s_max)) goto clear; // EOF
 	    }
 	}
 
 //	printf("FFT:\n");
-	fftwf_execute(plan);
+	fftwf_execute(b->plan);
 //	printf("OK!\n");
 
 	float fft_max=0;
@@ -817,16 +850,16 @@ clear:	    memset(b->fft+BLOCKSIZE*n,0,BLOCKSIZE);
 	int i;
 #ifdef CEPSTRUM
 	for(i=0;i<FFTSIZE;i++){
-	    double cc=fft_out[i][0]*fft_out[i][0] + fft_out[i][1]*fft_out[i][1];
-	    fft_in[i]=log1p(cc); // for cepstrum
-//	    fft_in[i]=cc; // for cepstrum
-//	    if(fft_in[i]<cft_min) cft_min=fft_in[i];
-//	    if(fft_in[i]>cft_max) cft_max=fft_in[i];
+	    double cc=b->fft_out[i][0]*b->fft_out[i][0] + b->fft_out[i][1]*b->fft_out[i][1];
+	    b->fft_in[i]=log1p(cc); // for cepstrum
+//	    b->fft_in[i]=cc; // for cepstrum
+//	    if(b->fft_in[i]<cft_min) cft_min=b->fft_in[i];
+//	    if(b->fft_in[i]>cft_max) cft_max=b->fft_in[i];
 	    if(i>=BLOCKSIZE) continue;
 	    double c=sqrt(cc);
 #else
 	for(i=0;i<BLOCKSIZE;i++){
-	    double c=sqrt(fft_out[i][0]*fft_out[i][0] + fft_out[i][1]*fft_out[i][1]);
+	    double c=sqrt(b->fft_out[i][0]*b->fft_out[i][0] + b->fft_out[i][1]*b->fft_out[i][1]);
 #endif
 	    b->fftavg[i]+=c;
 //	    b->fftavg[i]=b->fftavg[i]*0.999+c;
@@ -876,10 +909,10 @@ clear:	    memset(b->fft+BLOCKSIZE*n,0,BLOCKSIZE);
 
 #ifdef CEPSTRUM
 //	cepstrum calc:
-	fftwf_execute(plan);
+	fftwf_execute(b->plan);
 	fft_max=0;fft_avg=0;
 	for(i=0;i<BLOCKSIZE;i++){
-	    double c=fft_out[i][0]*fft_out[i][0] + fft_out[i][1]*fft_out[i][1];
+	    double c=b->fft_out[i][0]*b->fft_out[i][0] + b->fft_out[i][1]*b->fft_out[i][1];
 	    if(i==0) c=0; // skip DC
 	    fft_res[i]=c;
 	    fft_avg+=c;
@@ -1086,14 +1119,25 @@ if(param+1>=argc){
 }
 
 
-fft_init();
+//fft_init();
 
 static buffer_t* buffers[3]={NULL,};
 static buffer_t* buffers_temp[3]={NULL,};
 
+#ifdef SMP
+#if !defined(__CYGWIN__) && !defined(__MINGW32__)
+pthread_t threads[3];
+#else
+HANDLE threads[3];
+#endif
+#endif
+
 buffers[0]=load_buffer(argv[param++]); if(!buffers[0]) return 1;
 buffers[1]=load_buffer(argv[param++]); if(!buffers[1]) return 1;
 buffers[2]=load_buffer(argv[param++]);
+fft_init(buffers[0]);
+fft_init(buffers[1]);
+if(buffers[2]) fft_init(buffers[2]);
 #if 1
 // igy tobb memoriat eszik, visoznt nem dobja el a cache-t shift/ctrl+S -nel
 buffers_temp[0]=dupe_buffer(buffers[0],2*BLOCKS);
@@ -1195,20 +1239,53 @@ refresh:
     int frameno=pos1*fps/buffers[0]->samplerate;
     int framenop=audio_playing?(audio_playing+audio_pos)*fps/buffers[0]->samplerate:frameno;
     int v2_delay=v2_delay_corr+delay2*fps/buffers[0]->samplerate;
-    
-    if(video_mode){
+
+
+void thread_1(void* param){
+    if(video_mode)
 	update_video(buffers[0],frameno);
-	update_video(buffers[1],v2_delay+frameno);
-    } else {
+    else
 	update_fft(buffers[0],pos1,1.0,0,step,avg);
+}
+void thread_2(void* param){
+    if(video_mode)
+	update_video(buffers[1],v2_delay+frameno);
+    else
 	update_fft(buffers[1],pos1+delay2,rs_mode ? resample : 1.0,rs_mode,step,avg);
+}
+void thread_3(void* param){
+    update_fft(buffers[2],pos1+delay2+b3_delay,rs_mode ? resample : 1.0,rs_mode,step,avg);
+}
+
+#ifdef SMP
+#if !defined(__CYGWIN__) && !defined(__MINGW32__)
+    ret = pthread_create( &threads[0], NULL, thread_1, NULL);
+    ret = pthread_create( &threads[1], NULL, thread_2, NULL);
+    if(buffers[2]) ret = pthread_create( &threads[2], NULL, thread_3, NULL);
+    pthread_join( threads[0], NULL);
+    pthread_join( threads[1], NULL);
+    if(buffers[2]) pthread_join( threads[2], NULL);
+#else
+    threads[0] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)thread_1, NULL, 0, 0);
+    threads[1] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)thread_2, NULL, 0, 0);
+    if(buffers[2]) threads[2] = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)thread_3, NULL, 0, 0);
+    WaitForMultipleObjects(buffers[2] ? 3 : 2, threads, TRUE, INFINITE);
+    CloseHandle(threads[0]);
+    CloseHandle(threads[1]);
+    if(buffers[2]) CloseHandle(threads[2]);
+#endif
+#else
+    thread_1(NULL);
+    thread_2(NULL);
+    if(buffers[2]) thread_3(NULL);
+#endif
+
+    
+    if(!video_mode)
         printf("volume ratio:  s_max: %5.3f  f_avg: %5.3f  f_max: %5.3f\n",
     	    buffers[1]->env_max.s_max/buffers[0]->env_max.s_max,
 	    buffers[1]->env_max.fft_avg/buffers[0]->env_max.fft_avg,
 	    buffers[1]->env_max.fft_max/buffers[0]->env_max.fft_max);
-    }
-
-    if(buffers[2]) update_fft(buffers[2],pos1+delay2+b3_delay,rs_mode ? resample : 1.0,rs_mode,step,avg);
 
     SDL_LockSurface(screen);
 //    draw(buffers[0],pos1,KOZ,0);
@@ -1224,12 +1301,12 @@ refresh:
     if(draw_mode){
 	draw(buffers[0],video_y0+KOZ);
 	draw(buffers[1],video_y0+KOZ+BLOCKSIZE/2);
-	draw_env(buffers[0],video_y0+KOZ+BLOCKSIZE/2,env_type,0xFF0000);
-	draw_env(buffers[1],video_y0+KOZ+BLOCKSIZE,env_type,0xFF00);
+	draw_env(buffers[0],video_y0+KOZ+BLOCKSIZE/2,env_type,0xFF<<COLOR_R);
+	draw_env(buffers[1],video_y0+KOZ+BLOCKSIZE,env_type,0xFF<<COLOR_G);
     } else {
 	draw_diff(buffers[0],buffers[1],video_y0+KOZ,diff_mode);
-	draw_env(buffers[0],video_y0+KOZ+BLOCKSIZE,env_type,0xFF0000);
-	draw_env(buffers[1],video_y0+KOZ+BLOCKSIZE,env_type,0xFF00);
+	draw_env(buffers[0],video_y0+KOZ+BLOCKSIZE,env_type,0xFF<<COLOR_R);
+	draw_env(buffers[1],video_y0+KOZ+BLOCKSIZE,env_type,0xFF<<COLOR_G);
     }
     
     if(buffers[2]){
@@ -1237,7 +1314,7 @@ refresh:
 	draw_cft(buffers[1],video_y0+KOZ+BLOCKSIZE/2+KOZ+256);
 #else
 	draw(buffers[2],video_y0+KOZ+BLOCKSIZE/2+KOZ+256);
-	draw_env(buffers[2],video_y0+KOZ+BLOCKSIZE+KOZ+256,env_type,0xFF00);
+	draw_env(buffers[2],video_y0+KOZ+BLOCKSIZE+KOZ+256,env_type,0xFF<<COLOR_G);
 #endif
     }
     
@@ -1265,9 +1342,9 @@ refresh:
     int i;
     for(i=0;i<screen->h;i++){
 	unsigned int* ptr= screen->pixels + i*screen->pitch;
-	ptr[screen->w/2]|=0x8080ff;
-	ptr[screen->w/2 - BLOCKS/2]|=0xff;
-	ptr[screen->w/2 + BLOCKS/2]|=0xff;
+	ptr[screen->w/2]|=0x808080|(0xFF<<COLOR_B);
+	ptr[screen->w/2 - BLOCKS/2]|=(0xFF<<COLOR_B);
+	ptr[screen->w/2 + BLOCKS/2]|=(0xFF<<COLOR_B);
     }
 
     memset(screen->pixels+video_y0*screen->pitch,64,KOZ*screen->pitch);
@@ -1277,7 +1354,7 @@ refresh:
     SDL_UnlockSurface(screen);
     SDL_UpdateRect(screen, 0, 0, screen->w, screen->h);
 
-    char title[100];
+    char title[500];
     sprintf(title,"pos1: %d [%4.3fs - %dh%02dm%02ds] || delay: %d [%4.3fs] (%+dms) || %s %d || zoom=%d",
 	pos1,pos1*timescale,
 	(int)(pos1*timescale/3600),

@@ -1,15 +1,18 @@
 A 'compare2' programmal gyorsan megnezhetjuk meg a nyers ac3/dts fileokat,
 hogy azokat hogyan kell majd "feldolgozni", de vagni is lehet mar vele.
+(A compare2 egy tovabbfejlesztett verzioja a search-aud/search-vid progiknak)
 
-A compare2 egy tovabbfejlesztett verzioja a search-aud/search-vid progiknak.
 Ez egybol az ac3/dts (vagy sztereo int16 wav) fileokbol dolgozik, es valos
-idoben szamolja az FFT-t es a nyujtast. Igy hamar kiderul, hogy:
+idoben szamolja az FFT-t es a _nyujtast_. Igy hamar kiderul, hogy:
 - mennyi az initial delay
 - kell-e egyaltalan vagni    (cutlist.txt is keszitheto vele!)
 - kell-e egyaltalan nyujtani
 - a hang nyujtast resample vagy a time-stretch modszerrel kell csinalni
 
 Pl.:  compare2 hd.dts hun.ac3
+tehat az eredeti hangsav az elso parameter, es a hozza igazitando a 2. param.
+FONTOS, hogy az eredeti, nyujtas _elotti_ hun hangot kell megadni, ha mar csak
+nyujtott hangunk van, akkor a beepitett nyujtast ki kell kapcsolni!!! (shift+R)
 
 Inditaskor megjelenik egy 1024x512 pixeles FFT, rajta piros szinnel az elso,
 zolddel a masodik file FFT-je. A search-hoz hasonloan lehet a nyilakkal,
@@ -37,6 +40,8 @@ mindenhol jonak tunik, akkor megallapithatjuk: ezt nem is kell vagni! :)))
 Masik lehetoseg a matching funkcio: 'm' lenyomasara folyamatosan teker
 elore (shift+'m' hatra), amig elcsuszast nem talal a 2 stream kozott.
 Igy ugyan lassan, de nagyon alaposan ossze lehet hasonlitani a 2 filet.
+(ez inkabb akkor mukodik ha 2 azonos nyelvu hangot hasonlitasz ossze,
+hdeng-dvdhun eseten nem igazan hasznalhato, csak hdeng-dvdeng-dvdhun eseten)
 
 Ha menteni akarjuk a vagasi poziciot es delayt, akkor a 'c' gombbal teheto meg.
 (cutlist.txt-hez fuzi hozza, millisec-ben megadva a HD-s poziciot es a delayt)
@@ -67,8 +72,12 @@ ellenorizheto a szaj-szinkron is.
 Ha mindket savhoz van .raw akkor egymason mutatja a kepeket, ugy, mint
 a hangot. 'd'-vel valtva savonkenti nezetre a kepeket is kulon mutatja!
 A kep fps-et (amihez a hang keszul!) az -fps opcioval lehet megadni (23.976)
+A .raw file eloallitasa MEncoder-rel:
+   mencoder forras.mkv -o cel.raw -nosound -noskip -mc 0 -ovc raw -of rawvideo -vf scale=256:128,format=y8
 
 Megadhatunk egy 3. hangsavot is, ilyenkor ezt az egesz alatt, a kepernyo
 aljan kulon megjeleniti, igy a vagasnal figyelembe veheto az ottani jel is.
 (ez akkor jo, ha az angol hang alapjan vagunk: compare2 hd.dts eng.ac3 hun.ac3)
+Kezdoknek ez ajanlott, sokkal konnyebb 2 eng hangot osszehasonlitani mint eng-hun.
 
+A -resample kapcsoloval megadhatunk a defaulttol (25/23.976) eltero nyujtast is.

@@ -27,8 +27,6 @@ static float gSumPhase[MAX_FRAME_LENGTH/2+1];
 static float gOutputAccum[2*MAX_FRAME_LENGTH];
 static float gAnaFreq[MAX_FRAME_LENGTH];
 static float gAnaMagn[MAX_FRAME_LENGTH];
-static float gSynFreq[MAX_FRAME_LENGTH];
-static float gSynMagn[MAX_FRAME_LENGTH];
 static float gWindow[MAX_FRAME_LENGTH];
 static long gRover = 0, gInit = 0;
 
@@ -37,13 +35,12 @@ static long gRover = 0, gInit = 0;
 
 void FFTfilter(long numSampsToProcess, long fftFrameSize, long osamp, float *indata, float *outdata, unsigned char* filter,int step,int invert)
 {
-	double magn, phase, tmp, real, imag;
-	long i,k, qpd, index;
+	long i,k;
 
 	/* set up some handy variables */
 	long fftFrameSize2 = fftFrameSize/2;
 	long stepSize = fftFrameSize/osamp;
-	double expct = 2.*M_PI/(double)osamp;
+//	double expct = 2.*M_PI/(double)osamp;
 	long inFifoLatency = fftFrameSize-stepSize;
 	if (!gRover) gRover = inFifoLatency;
 

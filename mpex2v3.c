@@ -123,6 +123,9 @@ int MPEX2_load(int hook){
 #if !defined(__CYGWIN__) && !defined(__MINGW32__)
 //    void* dll=mmap((void*)(0x400000+LOADBASE), LOADSIZE, PROT_READ | PROT_WRITE | PROT_EXEC,
 //            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#if defined(MAP_ANON) && !defined(MAP_ANONYMOUS)
+#define MAP_ANONYMOUS MAP_ANON
+#endif
     void* dll=mmap(NULL, LOADSIZE, PROT_READ | PROT_WRITE | PROT_EXEC,
             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 #else

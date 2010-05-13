@@ -40,6 +40,11 @@ int c;
 
 printf("==============================================================================\n");
 FILE* cutlist=fopen("cutlist.txt","r");
+if(!cutlist){
+    printf("\nCannot open 'cutlist.txt' !!!\n");
+    return 1;
+}
+
 char sor[1000];
 while(fgets(sor,1000,cutlist)){
     char* e=sor;

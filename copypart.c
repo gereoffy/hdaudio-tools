@@ -35,7 +35,6 @@ void filecopy(FILE* f2,FILE* f1,long long len){
 }
 
 int main(int argc,char* argv[]){
-int c;
 
 FILE* f1=fopen(argv[1],"rb");
 if(!f1) return 1;

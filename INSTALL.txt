@@ -1,0 +1,39 @@
+HD-AUDIO TOOLS v2.x (C) by A'rpi
+================================
+A csomag a kovetkezo programokbol all:
+
+Hang vagashoz:
+compare2 - 2/3 ac3/dts/wav file osszehasonlitasa/vagasa, resample vs timestretch vs semmi
+cut      - ez hajtja vegre a vagast a wav-okon vagy ac3/dts fileokon (lossless cut)
+copypart - ac3/dts file egy reszenek masolasa egy masik ac3/dts file-ba (potlashoz)
+
+Hang konvertalashoz:
+resample - ac3/dts/wav konvertalo es nyujto (resample algoritmus) progi
+tstretch - ac3/dts/wav konvertalo es nyujto (time-stretch alg.) progi
+dtspack  - surcode altal keszitett un. padded dts formatum konvertalasa packed dts-re
+mp3towav - mp3 -> wav konvertalas, az initial delay megtartasaval (avi-s hanghoz)
+agm2dts  - agm->dts encoder, a DTS.dll-t hasznalja a win32 dll loaderrel
+dvddelay - kiszamolja a DVD-n az audio delayt (experimental)
+
+*smp     - * SMP-s (tobb procit/szalat hasznalo) valtozata
+
+HDTV video forras ujrakodolasanak elokeszitesehez: (DGIndex linuxra portolva)
+dgindex  - mpeg 1/2 ES (PS, TS nem tamogatott!) alapjan .D2V file letrehozasa
+dgfix    - D2V javitasa (3:2 pulldown korrekciok)
+dgparse  - D2V filebol .TXT letrehozasa (ez a TXT kell a patchelt mencoder-nek!)
+
+FORDITAS:
+
+Makefile-t editalni!!!!!!
+aztan:  make
+ha valami nem fordul, kommentezd ki a Makefile-ban vagy make -k asszem
+
+a forditashoz kell:
+
+liba52: http://liba52.sourceforge.net/files/a52dec-snapshot.tar.gz
+libdca: http://download.videolan.org/pub/videolan/libdca/0.0.5/libdca-0.0.5.tar.bz2
+libfftw az --enable-float opcioval forditva: http://www.fftw.org
+libSDL  (compare2-hoz kell)
+libmad  (csak az mp3towav-hoz kell)
+loader  (mellekelve, csak linux alatt a DTS enkodolashoz kell, agm2dts-hez)
+

@@ -10,22 +10,22 @@ ezt a legegyszerubben a resample programmal lehet, lasd resample.txt
 a cutlist.txt tartalmazza a vagasi helyeket (minden szam millisec).
 vigyazat, ebben a delay ertekek abszolut ertekek, mindig az eredetihez
 kepest irja oket. Ha relativ delay kell (az elozohoz kepesti), akkor
-futtasd le parameterek nelkul a 'cut' progit, es az kiirja ezeket!
+futtasd le parameterek nelkul a 'hdcut' progit, es az kiirja ezeket!
 
 automatikus vagas:
-ezt a 'cut' nevu progi szepen elvegzi, csak meg kell neki adni a
+ezt a 'hdcut' nevu progi szepen elvegzi, csak meg kell neki adni a
 vagatlan hangot es hogy milyen neven mentse el a vagottat, pl:
-cut dvd-hun-nyujtott-6ch.wav hundub-vagott.wav
+hdcut dvd-hun-nyujtott-6ch.wav hundub-vagott.wav
 
 ha ac3/dts fileaink vannak, mert nem kellett nyujtani (van sok film
 aminel a dvd verzioban inkabb a kepet nyujtottak (minden 25. frame
 duplazasaval) mint a hangot nyomtak volna ossze, vagy pedig ha a hd
 kep fps-et allitjuk 25-re), azt is lehet egybol vagni, ujratomorites
-nelkul:  cut dvd-hun.ac3 hundub-vagott.ac3
+nelkul:  hdcut dvd-hun.ac3 hundub-vagott.ac3
 megjegyzes: ilyenkor kb 30ms pontossagu csak a vagas, mivel ekkora
 1 ac3 frame (31.5 ac3 frame masodpercenkent).
 
-megjegyzes: a 'cut' a vagast nem bonyolitja el, ha ki kell vagni,
+megjegyzes: a 'hdcut' a vagast nem bonyolitja el, ha ki kell vagni,
 azt 1:1-ben kivagja (tervben van valami smoothing vagy crossfade
 megoldas is). ha potolni kell, akkor azt is a forrasbol potolja,
 a vagasi pontban megadott delay-el. ez nem mindig jo (van, hogy
@@ -35,19 +35,19 @@ sot, van hogy ez (par masodpercnyi hang ismetlodese) kevesbe
 eszreveheto (plane ha nincs szoveg csak hatterzaj vagy zene),
 mintha egy mas hangszinu angol dub-bol lenne potolva...
 
-a cut, ha meg van adva egy 3. filenev is, akkor az 1 masodpercnel
+a hdcut, ha meg van adva egy 3. filenev is, akkor az 1 masodpercnel
 hosszabb insert-et (potlast) ebbol potolja, es nem ismetlessel.
 igy ha pl. a hd rendezoi/bovitett mig a hundub forrasa nem az,
 akkor a hd-rol is kell kesziteni egy wav-ot (ugyanolyan formatumba!
 tehat ha a hd 5.1 a hun 2.0 akkor le kell konvertalni!!!), es
-megadni a cut-nak igy a hosszabb reszeket abbol fogja potolni.
+megadni a hdcut-nak igy a hosszabb reszeket abbol fogja potolni.
 
 ha pl. kimaradt jelenet van, akkor a copypart programmal lehet
 a megadott idoszakot vegig atmasolni utolag.
 
-cut original.wav cut.wav [hd.wav]
-vagy: cut original.ac3 cut.ac3 [hd.ac3]
-vagy: cut original.dts cut.dts [hd.dts]
+hdcut original.wav cut.wav [hd.wav]
+vagy: hdcut original.ac3 cut.ac3 [hd.ac3]
+vagy: hdcut original.dts cut.dts [hd.dts]
 (minden esetben a 2-3 file formatuma, samplerate-ja es bitrataja ugyanaz legyen!)
 
 copypart original.[wav|ac3|dts] new.[wav|ac3|dts] starttime endtime
