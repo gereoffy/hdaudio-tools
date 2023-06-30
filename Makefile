@@ -14,7 +14,8 @@
 ## x86 Linux / cygwin:
 #-mfpmath=sse
 ##CFLAGS = -O3 -march=i686 -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -lm
-CFLAGS = -O3 -march=i686 -malign-double -ffast-math -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -lm
+#CFLAGS = -O3 -march=i686 -malign-double -ffast-math -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -lm
+CFLAGS = -O3 -malign-double -ffast-math -Wall -DDTS -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
 SDL = -lSDL
 
 LOADERFLAGS=-Iloader -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -Ddbg_printf=__vprintf -DTRACE=__vprintf
@@ -34,13 +35,13 @@ LOADER=  loader/elfdll.c \
 ##cc -march=i686 -mtune=i686  -g -o tf -O3 $CFLAGS tf.c $LOADER -ldl -lm -lpthread -lfftw3f
 
 #FFTW = -lfftw3
-FFTWF = -lfftw3f
+FFTWF = -lfftw3f -lm
 
-AC3 = -la52 -ldts
+AC3 = -la52 -ldca
 MP3 = -lmad
 #SRC = -lsamplerate
 SRC = samplerate.c src_sinc.c
-APPS=resample tstretch tstretchsmp hdcut copypart dgindex dgfix dgparse dtspack dvddelay mp3towav compare2 compare2smp agm2dts
+APPS=resample tstretch tstretchsmp hdcut copypart dgindex dgfix dgparse dtspack dvddelay mp3towav compare2 compare2smp # agm2dts
 
 all: $(APPS)
 
@@ -58,11 +59,11 @@ tstretch: resample.c mpex2v3.c mpex2_bin.c mpex2_c.c mpex2_conv.c
 tstretchsmp: resample.c mpex2v3.c mpex2_bin.c mpex2_c.c mpex2_conv.c
 	$(CC) -DMPEX2 -DFFTW -DSMP $(CFLAGS) -o $@ $^ $(AC3) $(FFTWF) -lpthread
 
-agm2dts: agm2dts.c $(LOADER)
-	$(CC) $(CFLAGS) $(LOADERFLAGS) -o $@ $^ -ldl -lpthread
+#agm2dts: agm2dts.c $(LOADER)
+#	$(CC) $(CFLAGS) $(LOADERFLAGS) -o $@ $^ -ldl -lpthread
 
-dtsma: $(LOADER) dtsma.c
-	$(CC) $(CFLAGS) $(LOADERFLAGS) -o $@ $^ -ldl -lpthread
+#dtsma: $(LOADER) dtsma.c
+#	$(CC) $(CFLAGS) $(LOADERFLAGS) -o $@ $^ -ldl -lpthread
 
 resample: resample.c $(SRC)
 	$(CC) $(CFLAGS) -o $@ $^ $(AC3)
