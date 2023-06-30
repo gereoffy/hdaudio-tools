@@ -18,4 +18,8 @@ $ make
 
 Notes:
 
-DLL files & win32 DLL loader from MPlayer not included (used by agm2dts & dtsma tools on linux)
+- Contains ugly reverse-engineered MPEX2 time-stretching code from TimeFactory.exe
+- Contains SINC code from libsamplerate:  http://www.mega-nerd.com/SRC/download.html
+- Contains optimized/modified smbPitchShift.cpp, original by Stephan M. Bernsee
+- Contains modified ParseD2V by Donald A. Graft
+- DTS .dll files & win32 DLL loader from MPlayer not included (used by agm2dts & dtsma tools on linux)
